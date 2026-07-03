@@ -1,0 +1,50 @@
+import streamlit as st
+import pandas as pd
+import folium
+from folium.plugins import HeatMap
+from streamlit_folium import st_folium
+
+st.set_page_config(layout="wide")
+st.title("Painel de Fiscalização IPEM/RJ - Mapa de Calor")
+
+# 1. Simulação ou carregamento dos seus dados de fiscalização (SEI / Planilhas)
+# O ideal é que seu processo de extração gere colunas de 'latitude' e 'longitude'
+@st.cache_data
+def carregar_dados_fiscalizacao():
+    # Substitua pelo carregamento real: pd.read_excel() ou pd.read_csv()
+    # Exemplo de estrutura necessária:
+    dados = {
+        'processo_sei': ['SEI-240001/001', 'SEI-240001/002', 'SEI-240001/003'],
+        'estabelecimento': ['Posto Combustível A', 'Supermercado B', 'Balança Indústria C'],
+        'latitude': [-22.9068, -22.9714, -22.8808],  # Coordenadas de exemplo (Centro, Copacabana, Zona Norte)
+        'longitude': [-43.1729, -43.1886, -43.2804],
+        'irregularidades_encontradas': [1, 0, 3] # Pode ser usado como "peso" no mapa de calor
+    }
+    return pd.DataFrame(dados)
+
+df_ipem = carregar_dados_fiscalizacao()
+
+# 2. Configuração do mapa base centrado no Rio de Janeiro
+coordenadas_rj = [-22.9068, -43.1729]
+mapa = folium.Map(location=coordenadas_rj, zoom_start=11, tiles="OpenStreetMap")
+
+# 3. Preparação dos dados para o HeatMap
+# Formato exigido: lista de listas [[lat, lon, peso], [lat, lon, peso], ...]
+dados_calor = df_ipem[['latitude', 'longitude']].values.tolist()
+
+# Se quiser ponderar o calor pelo número de irregularidades ou volume fiscalizado:
+# dados_calor = df_ipem[['latitude', 'longitude', 'irregularidades_encontradas']].values.tolist()
+
+# 4. Adicionar a camada de calor ao mapa
+HeatMap(
+    data=dados_calor,
+    radius=15,
+    max_zoom=13,
+    blur=10,
+    min_opacity=0.5
+).add_to(mapa)
+
+# 5. Renderização no Streamlit
+st_folium(mapa, width=1100, height=600)
+
+st.dataframe(df_ipem)
